@@ -1,6 +1,7 @@
 package earth.terrarium.ad_astra.common.util.algorithm;
 
 import earth.terrarium.ad_astra.common.block.door.SlidingDoorBlock;
+import earth.terrarium.ad_astra.common.util.OxygenUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
@@ -21,13 +22,17 @@ public record OxygenFillerAlgorithm(Level level, int maxBlockChecks) {
 
         Set<BlockPos> positions = new HashSet<>();
         Set<BlockPos> queue = new LinkedHashSet<>();
+
+        // Keep track of how many blocks were already oxygenated by other sources
+        int alreadyOxygenated = 0;
+
         queue.add(start);
         main:
         while (!queue.isEmpty()) {
 
             // Cancel if the amount of oxygen exceeds the limit. This is the case if there was an oxygen leak or the room was too
-            // large to support the oxygen
-            if (positions.size() >= this.maxBlockChecks) {
+            // large to support the oxygen. Blocks that are already oxygenated by other sources are subtracted from the count.
+            if (positions.size() - alreadyOxygenated >= this.maxBlockChecks) {
                 break;
             }
 
@@ -47,6 +52,11 @@ public record OxygenFillerAlgorithm(Level level, int maxBlockChecks) {
                 if (!(state.getBlock() instanceof IceBlock) && !(state.getBlock() instanceof GrassBlock)) {
                     continue;
                 }
+            }
+
+            // If the block is already oxygenated by another source, take count of it
+            if (OxygenUtils.posHasOxygen(this.level, pos)) {
+                alreadyOxygenated++;
             }
 
             positions.add(pos);
